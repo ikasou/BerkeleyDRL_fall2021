@@ -155,7 +155,7 @@ class MLPPolicySL(MLPPolicy):
         for epoch in range(0, 5): # 5 epochs at maximum
             
             # Print epoch
-            print(f'Starting epoch {epoch+1}')
+            # print(f'Starting epoch {epoch+1}')
             
             # Get inputs
             inputs, targets = ptu.from_numpy(observations.astype(np.float32)), ptu.from_numpy(actions.astype(np.float32))
@@ -176,9 +176,8 @@ class MLPPolicySL(MLPPolicy):
             self.optimizer.step()
             
             # Print statistics
-            current_loss += loss.item()
-            print('Loss after epoch %5d: %.3f' %
-                    (epoch + 1, current_loss))
+            # current_loss += loss.item()
+            # print('Loss after epoch %5d: %.3f' % (epoch + 1, current_loss))
             
         return {
             # You can add extra logging information here, but keep this line
