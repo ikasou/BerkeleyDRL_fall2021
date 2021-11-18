@@ -81,19 +81,58 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        raise NotImplementedError
+        # raise NotImplementedError
+        observation = ptu.from_numpy(observation.astype(np.float32))
+        action = self(observation)
+        return ptu.to_numpy(action)
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
-        raise NotImplementedError
+        #raise NotImplementedError
+        loss_function = nn.CrossEntropyLoss()
 
+        # Set current loss value
+        current_loss = 0.0
+        # Run the training loop
+        for epoch in range(0, 5): # 5 epochs at maximum
+            
+            # Print epoch
+            print(f'Starting epoch {epoch+1}')
+            
+            # Get inputs
+            inputs, targets = observations, actions
+            
+            # Zero the gradients
+            self.optimizer.zero_grad()
+            
+            # Perform forward pass
+            outputs = self(inputs)
+            
+            # Compute loss
+            loss = loss_function(outputs, targets)
+            
+            # Perform backward pass
+            loss.backward()
+            
+            # Perform optimization
+            self.optimizer.step()
+            
+            # Print statistics
+            current_loss += loss.item()
+            print('Loss after epoch %5d: %.3f' %
+                    (epoch + 1, current_loss))
+            
     # This function defines the forward pass of the network.
     # You can return anything you want, but you should be able to differentiate
     # through it. For example, you can return a torch.FloatTensor. You can also
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        raise NotImplementedError
+        #raise NotImplementedError
+        if self.discrete:
+            return self.logits_na(observation)
+        else:
+            return self.mean_net(observation)
 
 
 #####################################################
@@ -109,7 +148,38 @@ class MLPPolicySL(MLPPolicy):
             adv_n=None, acs_labels_na=None, qvals=None
     ):
         # TODO: update the policy and return the loss
-        loss = 1 #TODO
+        # Set current loss value
+        loss_function = self.loss
+        current_loss = 0.0
+        # Run the training loop
+        for epoch in range(0, 5): # 5 epochs at maximum
+            
+            # Print epoch
+            print(f'Starting epoch {epoch+1}')
+            
+            # Get inputs
+            inputs, targets = ptu.from_numpy(observations.astype(np.float32)), ptu.from_numpy(actions.astype(np.float32))
+            
+            # Zero the gradients
+            self.optimizer.zero_grad()
+            
+            # Perform forward pass
+            outputs = self(inputs)
+            
+            # Compute loss
+            loss = loss_function(outputs, targets)
+            
+            # Perform backward pass
+            loss.backward()
+            
+            # Perform optimization
+            self.optimizer.step()
+            
+            # Print statistics
+            current_loss += loss.item()
+            print('Loss after epoch %5d: %.3f' %
+                    (epoch + 1, current_loss))
+            
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),

@@ -52,19 +52,14 @@ def build_mlp(
             self.input = nn.Linear(input_size, size)
             self.hidden = nn.ModuleList()
             for _ in range(n_layers):
-                self.hidden.append(nn.Linear(size, size))
+                self.hidden.append(nn.Linear(size, size))  
             self.output = nn.Linear(size, output_size)
-            self.layers = nn.Sequential(
-                self.input,
-                nn.ReLU(),
-                self.output
-            )
-        
+       
         def forward(self, x):
-            F = activation(self.input)
+            h = self.input(x)
             for layer in self.hidden:
-                x = F.activation(layer(x))
-            output= F.activation(self.output(x), dim=1)
+                h = activation(layer(h))
+            return output_activation(self.output(h))
         
     return MLP()
     # TODO: return a MLP. This should be an instance of nn.Module
