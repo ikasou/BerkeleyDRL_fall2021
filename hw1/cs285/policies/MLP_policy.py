@@ -152,7 +152,7 @@ class MLPPolicySL(MLPPolicy):
         loss_function = self.loss
         current_loss = 0.0
         # Run the training loop
-        for epoch in range(0, 5): # 5 epochs at maximum
+        for epoch in range(1): # 5 epochs at maximum
             
             # Print epoch
             # print(f'Starting epoch {epoch+1}')
