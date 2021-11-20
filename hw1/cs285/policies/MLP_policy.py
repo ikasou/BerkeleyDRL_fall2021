@@ -88,51 +88,29 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
-        #raise NotImplementedError
-        loss_function = nn.CrossEntropyLoss()
+        raise NotImplementedError
 
-        # Set current loss value
-        current_loss = 0.0
-        # Run the training loop
-        for epoch in range(0, 5): # 5 epochs at maximum
-            
-            # Print epoch
-            print(f'Starting epoch {epoch+1}')
-            
-            # Get inputs
-            inputs, targets = observations, actions
-            
-            # Zero the gradients
-            self.optimizer.zero_grad()
-            
-            # Perform forward pass
-            outputs = self(inputs)
-            
-            # Compute loss
-            loss = loss_function(outputs, targets)
-            
-            # Perform backward pass
-            loss.backward()
-            
-            # Perform optimization
-            self.optimizer.step()
-            
-            # Print statistics
-            current_loss += loss.item()
-            print('Loss after epoch %5d: %.3f' %
-                    (epoch + 1, current_loss))
-            
     # This function defines the forward pass of the network.
     # You can return anything you want, but you should be able to differentiate
     # through it. For example, you can return a torch.FloatTensor. You can also
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        #raise NotImplementedError
         if self.discrete:
-            return self.logits_na(observation)
+            logits = self.logits_na(observation)
+            action_distribution = distributions.Categorical(logits=logits)
+            return action_distribution
         else:
-            return self.mean_net(observation)
+            batch_mean = self.mean_net(observation)
+            scale_tril = torch.diag(torch.exp(self.logstd))
+            batch_dim = batch_mean.shape[0]
+            batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
+            action_distribution = distributions.MultivariateNormal(
+                batch_mean,
+                scale_tril=batch_scale_tril,
+            )
+            return action_distribution
+
 
 
 #####################################################
@@ -153,32 +131,33 @@ class MLPPolicySL(MLPPolicy):
         current_loss = 0.0
         # Run the training loop
         for epoch in range(1): # 5 epochs at maximum
-            
+
             # Print epoch
             # print(f'Starting epoch {epoch+1}')
-            
+
             # Get inputs
-            inputs, targets = ptu.from_numpy(observations.astype(np.float32)), ptu.from_numpy(actions.astype(np.float32))
-            
+            inputs, targets = ptu.from_numpy(observations.astype(np.float32)),
+                                ptu.from_numpy(actions.astype(np.float32))
+
             # Zero the gradients
             self.optimizer.zero_grad()
-            
+
             # Perform forward pass
             outputs = self(inputs)
-            
+
             # Compute loss
             loss = loss_function(outputs, targets)
-            
+
             # Perform backward pass
             loss.backward()
-            
+
             # Perform optimization
             self.optimizer.step()
-            
+
             # Print statistics
             # current_loss += loss.item()
             # print('Loss after epoch %5d: %.3f' % (epoch + 1, current_loss))
-            
+
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),

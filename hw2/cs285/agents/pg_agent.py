@@ -33,7 +33,6 @@ class PGAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer(1000000)
 
     def train(self, observations, actions, rewards_list, next_observations, terminals):
-
         """
             Training a PG agent refers to updating its actor using the given observations/actions
             and the calculated qvals/advantages that come from the seen rewards.
@@ -44,12 +43,11 @@ class PGAgent(BaseAgent):
 
         # HINT1: use helper functions to compute qvals and advantages
         # HINT2: look at the MLPPolicyPG class for how to update the policy
-            # and obtain a train_log
+        # and obtain a train_log
 
         return train_log
 
     def calculate_q_vals(self, rewards_list):
-
         """
             Monte Carlo estimation of the Q function.
         """
@@ -80,7 +78,6 @@ class PGAgent(BaseAgent):
         return q_values
 
     def estimate_advantage(self, obs, rews_list, q_values, terminals):
-
         """
             Computes advantages by (possibly) using GAE, or subtracting a baseline from the estimated Q values
         """
