@@ -96,6 +96,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # raise NotImplementedError
         observation = ptu.from_numpy(observation.astype(np.float32))
         action = self(observation)
+        if issubclass(action.__class__, torch.distributions.Distribution):
+            action = action.sample()
         return ptu.to_numpy(action)
 
     # update/train this policy
@@ -158,7 +160,7 @@ class MLPPolicyPG(MLPPolicy):
                 ## updating the baseline. Remember to 'zero_grad' first
             ## HINT2: You will need to convert the targets into a tensor using
                 ## ptu.from_numpy before using it in the loss
-
+            pass
             TODO
 
         train_log = {
@@ -183,7 +185,7 @@ class MLPPolicyPG(MLPPolicy):
 #######################################################
 #######################################################
 
-    class MLPPolicySL(MLPPolicy):  # HW1
+class MLPPolicySL(MLPPolicy):  # HW1
     def __init__(self, ac_dim, ob_dim, n_layers, size, **kwargs):
         super().__init__(ac_dim, ob_dim, n_layers, size, **kwargs)
         self.loss = nn.MSELoss()
@@ -203,7 +205,7 @@ class MLPPolicyPG(MLPPolicy):
             # print(f'Starting epoch {epoch+1}')
 
             # Get inputs
-            inputs, targets = ptu.from_numpy(observations.astype(np.float32)),
+            inputs, targets = ptu.from_numpy(observations.astype(np.float32)), \
                                 ptu.from_numpy(actions.astype(np.float32))
 
             # Zero the gradients

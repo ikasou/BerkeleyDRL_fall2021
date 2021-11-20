@@ -114,7 +114,7 @@ class PGAgent(BaseAgent):
                         ## 0 otherwise.
                     ## HINT 2: self.gae_lambda is the lambda value in the
                         ## GAE formula
-
+                    pass
                 # remove dummy advantage
                 advantages = advantages[:-1]
 
@@ -157,6 +157,12 @@ class PGAgent(BaseAgent):
         """
 
         # TODO: create list_of_discounted_returns
+        list_of_discounted_returns = []
+        cumulative = 0.0
+        for t, r in enumerate(rewards):
+            cumulative += (gamma**t) * r
+            
+        list_of_discounted_returns = [ cumulative ] * len(rewards)
 
         return list_of_discounted_returns
 
@@ -169,6 +175,14 @@ class PGAgent(BaseAgent):
 
         # TODO: create `list_of_discounted_returns`
         # HINT: it is possible to write a vectorized solution, but a solution
-            # using a for loop is also fine
+        # using a for loop is also fine
+
+        list_of_discounted_cumsums = [0.0] * len(rewards)
+        
+        for i in range(0, len(rewards)):
+            cumulative = 0.0
+            for j in range(i, len(rewards)):
+                cumulative += (gamma**(j-i)) * rewards[j]
+            list_of_discounted_cumsums[i] = cumulative
 
         return list_of_discounted_cumsums
