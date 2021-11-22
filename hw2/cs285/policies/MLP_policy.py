@@ -137,7 +137,13 @@ class MLPPolicyPG(MLPPolicy):
     def update(self, observations, actions, advantages, q_values=None):
         observations = ptu.from_numpy(observations)
         actions = ptu.from_numpy(actions)
-        advantages = ptu.from_numpy(advantages)
+        concat_advantages = ptu.from_numpy(np.concatenate(advantages))
+        action_distribution = self(observations)
+        log_pis = action_distribution.log_prob(actions)
+        loss = -1 * torch.dot(log_pis, concat_advantages)
+        self.optimizer.zero_grad()
+        loss.backward()
+
 
         # TODO: update the policy using policy gradient
         # HINT1: Recall that the expression that we want to MAXIMIZE
@@ -149,7 +155,7 @@ class MLPPolicyPG(MLPPolicy):
         # HINT4: use self.optimizer to optimize the loss. Remember to
             # 'zero_grad' first
 
-        TODO
+        # TODO
 
         if self.nn_baseline:
             ## TODO: update the neural network baseline using the q_values as
@@ -161,7 +167,7 @@ class MLPPolicyPG(MLPPolicy):
             ## HINT2: You will need to convert the targets into a tensor using
                 ## ptu.from_numpy before using it in the loss
             pass
-            TODO
+            # TODO
 
         train_log = {
             'Training Loss': ptu.to_numpy(loss),
