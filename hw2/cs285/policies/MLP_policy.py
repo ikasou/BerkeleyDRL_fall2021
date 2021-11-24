@@ -10,6 +10,7 @@ from torch import distributions
 
 from cs285.infrastructure import pytorch_util as ptu
 from cs285.policies.base_policy import BasePolicy
+from torch.nn.modules.loss import CrossEntropyLoss
 
 
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
@@ -137,13 +138,13 @@ class MLPPolicyPG(MLPPolicy):
     def update(self, observations, actions, advantages, q_values=None):
         observations = ptu.from_numpy(observations)
         actions = ptu.from_numpy(actions)
-        concat_advantages = ptu.from_numpy(np.concatenate(advantages))
+        concat_advantages = ptu.from_numpy(-1*np.concatenate(advantages))
         action_distribution = self(observations)
         log_pis = action_distribution.log_prob(actions)
-        loss = -1 * torch.dot(log_pis, concat_advantages)
         self.optimizer.zero_grad()
+        loss = torch.dot(concat_advantages, log_pis)
         loss.backward()
-
+        self.optimizer.step()
 
         # TODO: update the policy using policy gradient
         # HINT1: Recall that the expression that we want to MAXIMIZE

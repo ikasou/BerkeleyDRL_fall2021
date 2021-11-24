@@ -70,12 +70,12 @@ class PGAgent(BaseAgent):
         # ordering as observations, actions, etc.
 
         if not self.reward_to_go:
-            q_values = np.asarray([ self._discounted_return(rew) for rew in rewards_list ]) #TODO
+            q_values = [ np.asarray(self._discounted_return(rew)) for rew in rewards_list ] #TODO
 
         # Case 2: reward-to-go PG
         # Estimate Q^{pi}(s_t, a_t) by the discounted sum of rewards starting from t
         else:
-            q_values = np.asarray([ self._discounted_cumsum(rew) for rew in rewards_list ]) #TODO
+            q_values = [ np.asarray(self._discounted_cumsum(rew)) for rew in rewards_list ] #TODO
         '''    
         lens = [ len(l) for l in values ] 
         max_lens = max(lens)
