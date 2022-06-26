@@ -104,7 +104,7 @@ class DQNAgent(object):
             # HINT: your critic already has this functionality implemented
             if self.num_param_updates % self.target_update_freq == 0:
                 for target_param, param in zip(
-                    self.critic.q_net_target.parameters(), self.q_net.parameters()
+                    self.critic.q_net_target.parameters(), self.critic.q_net.parameters()
                 ):
                     target_param.data.copy_(param.data) #TODO
 
