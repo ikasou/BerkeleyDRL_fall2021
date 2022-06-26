@@ -81,9 +81,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        # raise NotImplementedError
         observation = ptu.from_numpy(observation.astype(np.float32))
-        action = self(observation)
+        action = self(observation).sample()
         return ptu.to_numpy(action)
 
     # update/train this policy
@@ -99,7 +98,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         if self.discrete:
             logits = self.logits_na(observation)
             action_distribution = distributions.Categorical(logits=logits)
-            return action_distribution
         else:
             batch_mean = self.mean_net(observation)
             scale_tril = torch.diag(torch.exp(self.logstd))
@@ -108,8 +106,9 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             action_distribution = distributions.MultivariateNormal(
                 batch_mean,
                 scale_tril=batch_scale_tril,
+                validate_args = False
             )
-            return action_distribution
+        return action_distribution
 
 
 
@@ -125,39 +124,17 @@ class MLPPolicySL(MLPPolicy):
             self, observations, actions,
             adv_n=None, acs_labels_na=None, qvals=None
     ):
-        # TODO: update the policy and return the loss
-        # Set current loss value
-        loss_function = self.loss
-        current_loss = 0.0
-        # Run the training loop
-        for epoch in range(1): # 5 epochs at maximum
-
-            # Print epoch
-            # print(f'Starting epoch {epoch+1}')
-
-            # Get inputs
-            inputs, targets = ptu.from_numpy(observations.astype(np.float32)),
+        
+        obs, targets = ptu.from_numpy(observations.astype(np.float32)), \
                                 ptu.from_numpy(actions.astype(np.float32))
-
-            # Zero the gradients
-            self.optimizer.zero_grad()
-
-            # Perform forward pass
-            outputs = self(inputs)
-
-            # Compute loss
-            loss = loss_function(outputs, targets)
-
-            # Perform backward pass
-            loss.backward()
-
-            # Perform optimization
-            self.optimizer.step()
-
-            # Print statistics
-            # current_loss += loss.item()
-            # print('Loss after epoch %5d: %.3f' % (epoch + 1, current_loss))
-
+            
+        # TODO: update the policy and return the loss
+        self.optimizer.zero_grad()
+        actions = self(obs).rsample()
+        loss = self.loss(actions, targets)
+        loss.backward()
+        self.optimizer.step()
+        
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),

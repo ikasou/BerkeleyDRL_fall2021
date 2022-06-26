@@ -45,26 +45,18 @@ def build_mlp(
     if isinstance(output_activation, str):
         output_activation = _str_to_activation[output_activation]
 
-    class MLP(nn.Module):
-        def __init__(self):
-            super(MLP, self).__init__()
-            
-            self.input = nn.Linear(input_size, size)
-            self.hidden = nn.ModuleList()
-            for _ in range(n_layers):
-                self.hidden.append(nn.Linear(size, size))  
-            self.output = nn.Linear(size, output_size)
-       
-        def forward(self, x):
-            h = self.input(x)
-            for layer in self.hidden:
-                h = activation(layer(h))
-            return output_activation(self.output(h))
-        
-    return MLP()
+
     # TODO: return a MLP. This should be an instance of nn.Module
     # Note: nn.Sequential is an instance of nn.Module.
     # raise NotImplementedError
+    return nn.Sequential(
+        nn.Linear(input_size, size),
+        activation,
+        *[nn.Sequential(nn.Linear(size, size), activation) for _ in range(n_layers)],
+        nn.Linear(size, output_size),
+        output_activation
+    )
+
 
 
 device = None
@@ -75,6 +67,9 @@ def init_gpu(use_gpu=True, gpu_id=0):
     if torch.cuda.is_available() and use_gpu:
         device = torch.device("cuda:" + str(gpu_id))
         print("Using GPU id {}".format(gpu_id))
+    elif torch.backends.mps.is_available() and use_gpu:
+        device = torch.device("mps")
+        print("Using GPU via device MPS")
     else:
         device = torch.device("cpu")
         print("GPU not detected. Defaulting to CPU.")

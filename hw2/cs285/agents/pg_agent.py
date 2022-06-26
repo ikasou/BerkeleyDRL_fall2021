@@ -64,31 +64,18 @@ class PGAgent(BaseAgent):
             # self._discounted_cumsum (you will need to implement these). These
             # functions should only take in a single list for a single trajectory.
 
+        if not self.reward_to_go:
         # Case 1: trajectory-based PG
         # Estimate Q^{pi}(s_t, a_t) by the total discounted reward summed over entire trajectory
         # HINT3: q_values should be a 1D numpy array where the indices correspond to the same
         # ordering as observations, actions, etc.
-
-        if not self.reward_to_go:
             q_values = [ np.asarray(self._discounted_return(rew)) for rew in rewards_list ] #TODO
-
+        else:
         # Case 2: reward-to-go PG
         # Estimate Q^{pi}(s_t, a_t) by the discounted sum of rewards starting from t
-        else:
             q_values = [ np.asarray(self._discounted_cumsum(rew)) for rew in rewards_list ] #TODO
-        '''    
-        lens = [ len(l) for l in values ] 
-        max_lens = max(lens)
-        q_values = np.ndarray(max_lens, dtype=np.float32) * 0.0
-        for j in range(0, max_lens):
-            count = 0; total = 0
-            for i in range(0, len(values)):
-                if j < lens[i]:
-                    total += values[i][j]
-                    count += 1
-            q_values[i] = total / count
-        '''
-        return q_values
+
+        return np.hstack(q_values)
 
     def estimate_advantage(self, obs, rews_list, q_values, terminals):
         """
@@ -105,7 +92,7 @@ class PGAgent(BaseAgent):
             ## TODO: values were trained with standardized q_values, so ensure
                 ## that the predictions have the same mean and standard deviation as
                 ## the current batch of q_values
-            values = None #TODO
+            values = (values_unnormalized - values_unnormalized.mean()) / values_unnormalized.std() * q_values.std() + q_values.mean()
 
             if self.gae_lambda is not None:
                 ## append a dummy T+1 value for simpler recursive calculation
@@ -127,26 +114,26 @@ class PGAgent(BaseAgent):
                         ## 0 otherwise.
                     ## HINT 2: self.gae_lambda is the lambda value in the
                         ## GAE formula
-                    pass
+                    if terminals[i] == 1:
+                        advantages[i] = rews[i]
+                    else:
+                        advantages[i] = rews[i] + self.gamma*values[i+1] - values[i] + self.gamma*self.gae_lambda*advantages[i+1]
                 # remove dummy advantage
                 advantages = advantages[:-1]
 
             else:
                 ## TODO: compute advantage estimates using q_values, and values as baselines
-                advantages = None #TODO
+                advantages = q_values - values #TODO
 
         # Else, just set the advantage to [Q]
         else:
-            advantages = q_values.copy()
+            advantages = q_values
 
         # Normalize the resulting advantages
         if self.standardize_advantages:
             ## TODO: standardize the advantages to have a mean of zero
             ## and a standard deviation of one
-            means = [ adv.mean() for adv in advantages ]
-            stddevs = [ adv.std() for adv in advantages ]
-            for i, a in enumerate(advantages):
-                advantages[i] = (a-means[i])/stddevs[i] #TODO
+            advantages = (advantages - advantages.mean()) / advantages.std()
 
         return advantages
 
@@ -173,7 +160,6 @@ class PGAgent(BaseAgent):
         """
 
         # TODO: create list_of_discounted_returns
-        list_of_discounted_returns = []
         cumulative = 0.0
         for t, r in enumerate(rewards):
             cumulative += (self.gamma**t) * r
@@ -192,13 +178,12 @@ class PGAgent(BaseAgent):
         # TODO: create `list_of_discounted_returns`
         # HINT: it is possible to write a vectorized solution, but a solution
         # using a for loop is also fine
-
-        list_of_discounted_cumsums = [0.0] * len(rewards)
         
-        for i in range(0, len(rewards)):
-            cumulative = 0.0
-            for j in range(i, len(rewards)):
-                cumulative += (self.gamma**(j-i)) * rewards[j]
-            list_of_discounted_cumsums[i] = cumulative
-
-        return list_of_discounted_cumsums
+        T = len(rewards)
+        list_of_discounted_cumsums = list()
+        last = 0.0
+        for i in reversed(range(T)):
+            list_of_discounted_cumsums.append(rewards[ i ] + self.gamma * last)
+            last = list_of_discounted_cumsums[-1] 
+            
+        return list_of_discounted_cumsums[::-1]

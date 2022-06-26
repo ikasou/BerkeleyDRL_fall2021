@@ -1,6 +1,6 @@
 import os
 import time
-
+import sys; sys.path.append('/Users/ikasou/Documents/Python/BerkeleyDRL_fall2021/hw2')
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.pg_agent import PGAgent
 

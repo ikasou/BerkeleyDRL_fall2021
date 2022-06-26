@@ -94,11 +94,8 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        # raise NotImplementedError
         observation = ptu.from_numpy(observation.astype(np.float32))
-        action = self(observation)
-        if issubclass(action.__class__, torch.distributions.Distribution):
-            action = action.sample()
+        action = self(observation).sample()
         return ptu.to_numpy(action)
 
     # update/train this policy
@@ -114,7 +111,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         if self.discrete:
             logits = self.logits_na(observation)
             action_distribution = distributions.Categorical(logits=logits)
-            return action_distribution
         else:
             batch_mean = self.mean_net(observation)
             scale_tril = torch.diag(torch.exp(self.logstd))
@@ -124,7 +120,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                 batch_mean,
                 scale_tril=batch_scale_tril,
             )
-            return action_distribution
+        return action_distribution
 
 #####################################################
 #####################################################
@@ -136,16 +132,6 @@ class MLPPolicyPG(MLPPolicy):
         self.baseline_loss = nn.MSELoss()
 
     def update(self, observations, actions, advantages, q_values=None):
-        observations = ptu.from_numpy(observations)
-        actions = ptu.from_numpy(actions)
-        concat_advantages = ptu.from_numpy(-1*np.concatenate(advantages))
-        action_distribution = self(observations)
-        log_pis = action_distribution.log_prob(actions)
-        self.optimizer.zero_grad()
-        loss = torch.dot(concat_advantages, log_pis)
-        loss.backward()
-        self.optimizer.step()
-
         # TODO: update the policy using policy gradient
         # HINT1: Recall that the expression that we want to MAXIMIZE
             # is the expectation over collected trajectories of:
@@ -156,6 +142,15 @@ class MLPPolicyPG(MLPPolicy):
         # HINT4: use self.optimizer to optimize the loss. Remember to
             # 'zero_grad' first
 
+        observations = ptu.from_numpy(observations)
+        actions = ptu.from_numpy(actions)
+        advantages = ptu.from_numpy(advantages)
+        self.optimizer.zero_grad()
+        action_distribution = self(observations)
+        log_pis = action_distribution.log_prob(actions)
+        loss = - log_pis@advantages #torch.dot(advantages, log_pis)
+        loss.backward()
+        self.optimizer.step()
         # TODO
 
         if self.nn_baseline:
@@ -167,11 +162,17 @@ class MLPPolicyPG(MLPPolicy):
                 ## updating the baseline. Remember to 'zero_grad' first
             ## HINT2: You will need to convert the targets into a tensor using
                 ## ptu.from_numpy before using it in the loss
-            pass
             # TODO
+            self.baseline_optimizer.zero_grad()
+            targets = ptu.from_numpy((q_values - q_values.mean()) / q_values.std())
+            estimates = self.baseline(observations).squeeze()
+            lossb = self.baseline_loss(estimates, targets)
+            lossb.backward()
+            self.baseline_optimizer.step()
 
         train_log = {
             'Training Loss': ptu.to_numpy(loss),
+            'Baseline Loss': ptu.to_numpy(lossb)
         }
         return train_log
 
@@ -191,51 +192,4 @@ class MLPPolicyPG(MLPPolicy):
 
 #######################################################
 #######################################################
-
-class MLPPolicySL(MLPPolicy):  # HW1
-    def __init__(self, ac_dim, ob_dim, n_layers, size, **kwargs):
-        super().__init__(ac_dim, ob_dim, n_layers, size, **kwargs)
-        self.loss = nn.MSELoss()
-
-    def update(
-            self, observations, actions,
-            adv_n=None, acs_labels_na=None, qvals=None
-    ):
-        # TODO: update the policy and return the loss
-        # Set current loss value
-        loss_function = self.loss
-        current_loss = 0.0
-        # Run the training loop
-        for epoch in range(1): # 5 epochs at maximum
-
-            # Print epoch
-            # print(f'Starting epoch {epoch+1}')
-
-            # Get inputs
-            inputs, targets = ptu.from_numpy(observations.astype(np.float32)), \
-                                ptu.from_numpy(actions.astype(np.float32))
-
-            # Zero the gradients
-            self.optimizer.zero_grad()
-
-            # Perform forward pass
-            outputs = self(inputs)
-
-            # Compute loss
-            loss = loss_function(outputs, targets)
-
-            # Perform backward pass
-            loss.backward()
-
-            # Perform optimization
-            self.optimizer.step()
-
-            # Print statistics
-            # current_loss += loss.item()
-            # print('Loss after epoch %5d: %.3f' % (epoch + 1, current_loss))
-
-        return {
-            # You can add extra logging information here, but keep this line
-            'Training Loss': ptu.to_numpy(loss),
-        }
 
