@@ -12,5 +12,5 @@ class ArgMaxPolicy(object):
         else:
             observation = obs[None]
         
-        action = self.critic.q_net_target(observation).argmax(dim=1)
+        action = self.critic.qa_values(observation).argmax(axis=1) 
         return action.squeeze()

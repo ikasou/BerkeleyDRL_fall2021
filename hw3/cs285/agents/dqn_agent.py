@@ -4,9 +4,6 @@ from cs285.infrastructure.dqn_utils import MemoryOptimizedReplayBuffer, Piecewis
 from cs285.policies.argmax_policy import ArgMaxPolicy
 from cs285.critics.dqn_critic import DQNCritic
 
-from cs285.infrastructure import pytorch_util as ptu
-
-
 class DQNAgent(object):
     def __init__(self, env, agent_params):
 
@@ -65,7 +62,7 @@ class DQNAgent(object):
                 # and then use those observations as input to your actor. 
             ob = self.replay_buffer.encode_recent_observation()
             
-            action = self.actor.get_action(ptu.from_numpy(ob))
+            action = self.actor.get_action(ob)
         
         # TODO take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
