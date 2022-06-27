@@ -62,7 +62,7 @@ def init_gpu(use_gpu=True, gpu_id=0):
     if torch.cuda.is_available() and use_gpu:
         device = torch.device("cuda:" + str(gpu_id))
         print("Using GPU id {}".format(gpu_id))
-    elif torch.backends.mps.is_available() and use_gpu:
+    elif use_gpu and 'mps' in dir(torch.backends) and torch.backends.mps.is_available():
         device = torch.device("mps")
         print("Using GPU via device MPS")        
     else:
