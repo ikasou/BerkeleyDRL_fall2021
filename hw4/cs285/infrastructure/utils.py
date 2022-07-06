@@ -57,7 +57,7 @@ def mean_squared_error(a, b):
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
 # TODO: get this from Piazza
     # initialize env for the beginning of a new rollout
-    ob = env.reset() # TODO # HINT: should be the output of resetting the env
+    ob = env.reset().astype(np.float32) # TODO # HINT: should be the output of resetting the env
 
     # init vars
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
@@ -86,8 +86,8 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
 
         # record result of taking that action
         steps += 1
-        next_obs.append(ob)
-        rewards.append(rew)
+        next_obs.append(ob.astype(np.float32))
+        rewards.append(rew.astype(np.float32))
 
         # TODO end the rollout if the rollout ended
         # HINT: rollout can end due to done, or due to max_path_length
