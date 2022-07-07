@@ -124,7 +124,7 @@ class RL_Trainer(object):
 
         for itr in range(n_iter):
             if itr % print_period == 0:
-                print("\n\n********** Iteration %i ************"%itr)
+                print("********** Iteration %i ************"%itr)
 
             # decide if videos should be rendered/logged at this iteration
             if itr % self.params['video_log_freq'] == 0 and self.params['video_log_freq'] != -1:
@@ -139,14 +139,15 @@ class RL_Trainer(object):
                 self.logmetrics = True
             else:
                 self.logmetrics = False
-
+                
+            # Main run loop: 
+            # Start by collecting a load of trajectories using collect_policy
+            # Potentially use initial_expertdata
             use_batchsize = self.params['batch_size']
             if itr == 0:
                 use_batchsize = self.params['batch_size_initial']
-            paths, envsteps_this_batch, train_video_paths = (
-                self.collect_training_trajectories(
+            paths, envsteps_this_batch, train_video_paths = self.collect_training_trajectories(
                     itr, initial_expertdata, collect_policy, use_batchsize)
-            )
 
             self.total_envsteps += envsteps_this_batch
 
@@ -156,9 +157,9 @@ class RL_Trainer(object):
             else:
                 self.agent.add_to_replay_buffer(paths)
 
-            # train agent (using sampled data from replay buffer)
+            # train agent (potentially using sampled data from replay buffer)
             if itr % print_period == 0:
-                print("\nTraining agent...")
+                print("Training agent...")
             all_logs = self.train_agent()
 
             # if there is a model, log model predictions
@@ -168,7 +169,7 @@ class RL_Trainer(object):
             # log/save
             if self.logvideo or self.logmetrics:
                 # perform logging
-                print('\nBeginning logging procedure...')
+                # print('\nBeginning logging procedure...')
                 self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 
                 if self.params['save_params']:
@@ -179,7 +180,7 @@ class RL_Trainer(object):
 
     def collect_training_trajectories(self, itr, initial_expertdata, collect_policy, num_transitions_to_sample, save_expert_data_to_disk=False):
         """
-        :param itr:
+        :param itr: # of iteration
         :param load_initial_expertdata:  path to expert data pkl file
         :param collect_policy:  the current policy using which we collect data
         :param num_transitions_to_sample:  the number of transitions we collect
@@ -190,14 +191,14 @@ class RL_Trainer(object):
         """
         # TODO: get this from Piazza
         if itr == 0 and not initial_expertdata is None:  # (1) load expert data
-            with open(load_initial_expertdata, 'rb') as f:
+            with open(initial_expertdata, 'rb') as f:
                 paths = pickle.loads(f.read())
                 return paths, 0, None
         else:
             # TODO collect `batch_size` samples to be used for training
             # HINT1: use sample_trajectories from utils
             # HINT2: you want each of these collected rollouts to be of length self.params['ep_len']
-            print("\nCollecting data to be used for training...")
+            print("Collecting trajectories to be used for training...")
             paths, envsteps_this_batch = utils.sample_trajectories(self.env, collect_policy, num_transitions_to_sample, 
                                             self.params['ep_len'], True)
 
@@ -205,27 +206,26 @@ class RL_Trainer(object):
         # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
         train_video_paths = None
         if self.logvideo:
-            print('\nCollecting train rollouts to be used for saving videos...')
+            print('Collecting training rollouts to be used for saving videos...')
             ## TODO look in utils and implement sample_n_trajectories
             train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
 
         return paths, envsteps_this_batch, train_video_paths
 
     def train_agent(self):
-    # TODO: get this from Piazza
+        # TODO: 
         all_logs = []
         for train_step in range(self.params['num_agent_train_steps_per_iter']):
             # TODO sample some data from the data buffer
             # HINT1: use the agent's sample function
             # HINT2: how much data = self.params['train_batch_size']
-            samples = self.agent.sample(self.params['train_batch_size'])
-            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = samples
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['train_batch_size'])
 
             # TODO use the sampled data to train an agent
             # HINT: use the agent's train function
             # HINT: keep the agent's training log for debugging
-            ret = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
-            train_log = ret #TODO
+            train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
+            #TODO
             all_logs.append(train_log)
         return all_logs
 
@@ -239,16 +239,16 @@ class RL_Trainer(object):
         #######################
 
         # collect eval trajectories, for logging
-        print("\nCollecting data for eval...")
+        print("Collecting data for evaluation...")
         eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
 
         # save eval rollouts as videos in tensorboard event file
         if self.logvideo and train_video_paths != None:
-            print('\nCollecting video rollouts eval')
+            print('Collecting video rollouts for evaluation...')
             eval_video_paths = utils.sample_n_trajectories(self.env, eval_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
 
             #save train/eval videos
-            print('\nSaving train rollouts as videos...')
+            print('Saving training and evaluation rollouts as videos...')
             self.logger.log_paths_as_videos(train_video_paths, itr, fps=self.fps, max_videos_to_save=MAX_NVIDEO,
                                             video_title='train_rollouts')
             self.logger.log_paths_as_videos(eval_video_paths, itr, fps=self.fps,max_videos_to_save=MAX_NVIDEO,
@@ -292,7 +292,7 @@ class RL_Trainer(object):
             for key, value in logs.items():
                 print('{} : {}'.format(key, value))
                 self.logger.log_scalar(value, key, itr)
-            print('Done logging...\n\n')
+            print('Done logging...\n')
 
             self.logger.flush()
 
@@ -307,7 +307,8 @@ class RL_Trainer(object):
         action_sequence = action_sequence[0]
 
         # calculate and log model prediction error
-        mpe, true_states, pred_states = utils.calculate_mean_prediction_error(self.env, action_sequence, self.agent.dyn_models, self.agent.actor.data_statistics)
+        mpe, true_states, pred_states = utils.calculate_mean_prediction_error(self.env, 
+            action_sequence, self.agent.dyn_models, self.agent.actor.data_statistics)
         assert self.params['agent_params']['ob_dim'] == true_states.shape[1] == pred_states.shape[1]
         ob_dim = self.params['agent_params']['ob_dim']
         ob_dim = 2*int(ob_dim/2.0) ## skip last state for plotting when state dim is odd

@@ -48,13 +48,11 @@ class MPCPolicy(BasePolicy):
                 + f"num_elites={self.cem_num_elites}, iterations={self.cem_iterations}")
 
     def sample_action_sequences(self, num_sequences, horizon, obs=None):
-        if self.sample_strategy == 'random' \
-            or (self.sample_strategy == 'cem' and obs is None):
+        if self.sample_strategy == 'random' or (self.sample_strategy == 'cem' and obs is None):
             # TODO(Q1) uniformly sample trajectories and return an array of
             # dimensions (num_sequences, horizon, self.ac_dim) in the range
             # [self.low, self.high]
-            random_action_sequences = self.low + (self.high - self.low)*np.random.rand(num_sequences, horizon, self.ac_dim).astype(np.float32)
-            return random_action_sequences
+            return self.low + (self.high - self.low)*np.random.rand(num_sequences, horizon, self.ac_dim).astype(np.float32)
         elif self.sample_strategy == 'cem':
             # TODO(Q5): Implement action selection using CEM.
             # Begin with randomly selected actions, then refine the sampling distribution
@@ -92,7 +90,7 @@ class MPCPolicy(BasePolicy):
             else:
                 sum_rew = np.column_stack((sum_rew, self.calculate_sum_of_rewards(obs, candidate_action_sequences, model)))
 
-        return np.mean(sum_rew, axis = 1, keepdims = False)
+        return np.mean(sum_rew, axis=1, keepdims=False)
 
     def get_action(self, obs):
         if self.data_statistics is None:
@@ -115,7 +113,6 @@ class MPCPolicy(BasePolicy):
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model):
         """
-
         :param obs: numpy array with the current observation. Shape [D_obs]
         :param candidate_action_sequences: numpy array with the candidate action
         sequences. Shape [N, H, D_action] where
@@ -126,19 +123,6 @@ class MPCPolicy(BasePolicy):
         :return: numpy array with the sum of rewards for each action sequence.
         The array should have shape [N].
         """
-        N, H, D_ac = candidate_action_sequences.shape
-        D_ob = len(obs)
-        predicted_obs = np.ndarray((N, H, D_ob), dtype=np.float32)
-        rewards = np.ndarray((N, H, 1))
-        for h in range(H):  
-            if h == 0:
-                predicted_obs[:, h, :] = model.get_prediction(np.broadcast_to(obs, (N, D_ob)), candidate_action_sequences[:, h, :], self.data_statistics)
-            else:
-                predicted_obs[:, h, :] = model.get_prediction(predicted_obs[:, h-1, :], candidate_action_sequences[:, h, :], self.data_statistics)
-            
-        rewards, dones = self.env.get_reward(predicted_obs.reshape(N*H, D_ob), candidate_action_sequences.reshape(N*H, D_ac))
-        truncated_rewards = rewards*(1-dones)  # should be able to do this given C row-major ordering is default
-        sum_of_rewards = np.sum(rewards.reshape(N, H), axis=1, keepdims=False)  # TODO (Q2)
         # For each candidate action sequence, predict a sequence of
         # states for each dynamics model in your ensemble.
         # Once you have a sequence of predicted states from each model in
@@ -150,4 +134,16 @@ class MPCPolicy(BasePolicy):
         # Hint: Remember that the model can process observations and actions
         #       in batch, which can be much faster than looping through each
         #       action sequence.
+        N, H, D_ac = candidate_action_sequences.shape
+        D_ob = len(obs)
+        predicted_obs = np.ndarray((N, H, D_ob), dtype=np.float32)
+        rewards = np.ndarray((N, H, 1), dtype=np.float32)
+        for h in range(H):  
+            used_obs = predicted_obs[:, h-1, :] if h>0 else np.broadcast_to(obs, (N, D_ob))
+            ac_seq = candidate_action_sequences[:, h, :]
+            predicted_obs[:, h, :] = model.get_prediction(used_obs, ac_seq, self.data_statistics)
+            
+        rewards, dones = self.env.get_reward(predicted_obs.reshape(N*H, D_ob), candidate_action_sequences.reshape(N*H, D_ac))
+        truncated_rewards = rewards*(1-dones)  # should be able to do this given C row-major ordering is default
+        sum_of_rewards = np.sum(rewards.reshape(N, H), axis=1, keepdims=False)  # TODO (Q2)
         return sum_of_rewards
