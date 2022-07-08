@@ -66,7 +66,7 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
         # render image of the simulated env
         if render:
             if 'rgb_array' in render_mode:
-                if hasattr(env, 'sim'):
+                if hasattr(env, 'sim') and 'reacher' not in env.unwrapped.spec.id:
                     image_obs.append(env.sim.render(camera_name='track', height=500, width=500)[::-1])
                 else:
                     image_obs.append(env.render(mode=render_mode))
