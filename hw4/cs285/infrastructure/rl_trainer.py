@@ -169,7 +169,6 @@ class RL_Trainer(object):
             # log/save
             if self.logvideo or self.logmetrics:
                 # perform logging
-                # print('\nBeginning logging procedure...')
                 self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 
                 if self.params['save_params']:
@@ -177,7 +176,7 @@ class RL_Trainer(object):
 
     ####################################
     ####################################
-
+    
     def collect_training_trajectories(self, itr, initial_expertdata, collect_policy, num_transitions_to_sample, save_expert_data_to_disk=False):
         """
         :param itr: # of iteration
@@ -200,7 +199,7 @@ class RL_Trainer(object):
             # HINT2: you want each of these collected rollouts to be of length self.params['ep_len']
             print("Collecting trajectories to be used for training...")
             paths, envsteps_this_batch = utils.sample_trajectories(self.env, collect_policy, num_transitions_to_sample, 
-                                            self.params['ep_len'], True)
+                                            self.params['ep_len'], False)
 
         # collect more rollouts with the same policy, to be saved as videos in tensorboard
         # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
