@@ -76,14 +76,14 @@ class MPCPolicy(BasePolicy):
                     candidate_action_sequences = np.fmax(self.low, np.fmin(self.high, candidate_action_sequences)).astype(np.float32)
                     candidate_action_sequences = candidate_action_sequences.transpose([1, 0, 2])
                 else: #return random the first time
-                    candidate_action_sequences = self.low + 
+                    candidate_action_sequences = self.low + \
                         (self.high - self.low)*np.random.rand(num_sequences, horizon, self.ac_dim).astype(np.float32)
                 predicted_rewards = self.evaluate_candidate_sequences(candidate_action_sequences, obs)
                 elite_indices = np.argsort(predicted_rewards)[-self.cem_num_elites:]
                 if (i > 0) and (i < self.cem_iterations - 1):
-                    elite_mean_at_t = self.cem_alpha * elite_mean_at_t + 
+                    elite_mean_at_t = self.cem_alpha * elite_mean_at_t + \
                         np.mean(candidate_action_sequences[elite_indices, :, :], axis = 0, dtype=np.float32, keepdims=False)
-                    elite_stddev_at_t = self.cem_alpha * elite_stddev_at_t + 
+                    elite_stddev_at_t = self.cem_alpha * elite_stddev_at_t + \
                         np.std(candidate_action_sequences[elite_indices, :, :], axis = 0, dtype=np.float32, keepdims=False)
                 else:
                     elite_mean_at_t = np.mean(candidate_action_sequences[elite_indices, :, :], axis = 0, dtype=np.float32, keepdims=False)

@@ -117,7 +117,7 @@ class FFModel(nn.Module, BaseModel):
             ptu.from_numpy(data_statistics["acs_std"]),
             ptu.from_numpy(data_statistics["delta_mean"]),
             ptu.from_numpy(data_statistics["delta_std"]) 
-        )[0]  
+        )[0]  # get the *un*normalized delta here
         # Hint: `self(...)` returns a tuple, but you only need to use one of the
         # outputs.
         return ptu.to_numpy(prediction)
@@ -138,11 +138,13 @@ class FFModel(nn.Module, BaseModel):
         :return:
         """
         # TODO(Q1) compute the normalized target for the model.
-        self.update_statistics(**data_statistics)
+        # self.update_statistics(**data_statistics)
         obs_tensor = ptu.from_numpy(observations)
         acs_tensor = ptu.from_numpy(actions)  
         next_obs_tensor = ptu.from_numpy(next_observations) 
-        target = normalize(next_obs_tensor-obs_tensor, self.delta_mean,  self.delta_std)
+        target = normalize(next_obs_tensor-obs_tensor,  
+            ptu.from_numpy(data_statistics["delta_mean"]), 
+            ptu.from_numpy(data_statistics["delta_std"]))
         # Hint: you should use `data_statistics['delta_mean']` and
         # `data_statistics['delta_std']`, which keep track of the mean
         # and standard deviation of the model.
@@ -150,13 +152,13 @@ class FFModel(nn.Module, BaseModel):
         prediction = self.forward(
             obs_tensor, 
             acs_tensor,            
-            self.obs_mean,
-            self.obs_std,
-            self.acs_mean,
-            self.acs_std,
-            self.delta_mean,
-            self.delta_std 
-        )[0]  
+            ptu.from_numpy(data_statistics["obs_mean"]),
+            ptu.from_numpy(data_statistics["obs_std"]),
+            ptu.from_numpy(data_statistics["acs_mean"]),
+            ptu.from_numpy(data_statistics["acs_std"]),
+            ptu.from_numpy(data_statistics["delta_mean"]),
+            ptu.from_numpy(data_statistics["delta_std"]) 
+        )[1]  # get the normalized delta here
         # Hint: `self(...)` returns a tuple, but you only need to use one of the
         # outputs.
          
